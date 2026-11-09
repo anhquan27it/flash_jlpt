@@ -1,0 +1,7 @@
+node_modules/
+db/
+tools/raw_*.json
+__pycache__/
+
+# Tài liệu gốc của khoá học (bản quyền Dũng Mori) – không đưa lên GitHub
+kanji/*.pdf

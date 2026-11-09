@@ -1,0 +1,15 @@
+{
+  "name": "flashjlpt",
+  "version": "0.1.0",
+  "description": "FlashJLPT – học từ vựng và hán tự JLPT với flashcard, bài tập và lặp lại ngắt quãng",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server.js",
+    "dev": "node --disable-warning=ExperimentalWarning --watch server.js",
+    "build:data": "python tools/parse_kanji_pdf.py kanji/ChuHanN4.pdf tools/raw_n4.json && python tools/build_data.py tools/raw_n4.json public/data/n4.json"
+  },
+  "engines": {
+    "node": ">=22.13"
+  }
+}

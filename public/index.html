@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>FlashJLPT – Học từ vựng & Hán tự JLPT</title>
+  <meta name="description" content="Học từ vựng và hán tự JLPT N4 bằng flashcard, bài tập trắc nghiệm và lặp lại ngắt quãng.">
+  <meta name="theme-color" content="#f6f4ef" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#15171c" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Klee+One:wght@600&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="css/app.css">
+  <script>
+    // apply saved theme / furigana before first paint (no flash)
+    try {
+      var s = JSON.parse(localStorage.getItem('fj_settings') || '{}');
+      if (s.theme && s.theme !== 'auto') document.documentElement.dataset.theme = s.theme;
+      if (s.furigana === false) document.documentElement.classList.add('no-furi');
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <a class="skip" href="#main">Bỏ qua tới nội dung</a>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#/" aria-label="FlashJLPT – Trang chủ">
+        <span class="brand-mark" aria-hidden="true">漢</span>
+        <span class="brand-name">Flash<b>JLPT</b></span>
+      </a>
+      <nav class="nav" aria-label="Điều hướng chính">
+        <a href="#/" data-nav="home">Tổng quan</a>
+        <a href="#/kanji" data-nav="kanji">Hán tự</a>
+        <a href="#/vocab" data-nav="vocab">Từ vựng</a>
+        <a href="#/flashcard" data-nav="flashcard">Flashcard</a>
+        <a href="#/quiz" data-nav="quiz">Bài tập</a>
+      </nav>
+      <div class="top-actions">
+        <label class="furi-toggle" title="Bật/tắt chữ hiragana phía trên chữ Hán (phím F)">
+          <input type="checkbox" id="furiToggle" checked>
+          <span class="switch" aria-hidden="true"></span>
+          <span class="furi-label">ふりがな</span>
+        </label>
+        <button class="icon-btn" id="themeBtn" type="button" aria-label="Đổi giao diện sáng/tối" title="Giao diện sáng/tối"></button>
+        <a class="user-btn" id="userBtn" href="#/account">Đăng nhập</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" tabindex="-1"></main>
+
+  <nav class="tabbar" aria-label="Điều hướng">
+    <a href="#/" data-nav="home"><span class="ti">⌂</span>Tổng quan</a>
+    <a href="#/kanji" data-nav="kanji"><span class="ti jp">漢</span>Hán tự</a>
+    <a href="#/vocab" data-nav="vocab"><span class="ti jp">語</span>Từ vựng</a>
+    <a href="#/flashcard" data-nav="flashcard"><span class="ti">▣</span>Flashcard</a>
+    <a href="#/quiz" data-nav="quiz"><span class="ti">✓</span>Bài tập</a>
+  </nav>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
