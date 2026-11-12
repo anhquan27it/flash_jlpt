@@ -30,6 +30,8 @@ File PDF gốc trong `kanji/` không được đưa lên GitHub (xem `.gitignore
 - **Từ vựng**: tìm bằng chữ Hán, hiragana, romaji hoặc tiếng Việt không dấu; lọc theo bài/trạng thái.
 - **Flashcard**: tự xáo trộn mỗi phiên + nút xáo trộn; Nhật→Việt hoặc Việt→Nhật; Chưa nhớ / Nhớ / Dễ (SRS);
   thẻ chưa nhớ quay lại cuối phiên; hoàn tác; vuốt trái/phải trên điện thoại; phím tắt `Space` `1` `2` `3` `Z` `S` `P`.
+  Phiên đang học dở được lưu trên máy sau mỗi thẻ – thoát hay tải lại trang vẫn tiếp tục được.
+- **Sao lưu tiến trình** (trang Tài khoản): lưu tiến trình thành file `.json` trên máy và nhập lại từ file (gộp, bản mới hơn được giữ).
 - **Bài tập**: 6 dạng – cách đọc, chữ Hán (bẫy cùng âm On kiểu JLPT), nghĩa, từ theo nghĩa, âm Hán Việt, gõ cách đọc (gõ romaji tự đổi sang hiragana).
   Câu sai được đưa vào danh sách ôn.
 - **Furigana bật/tắt** ở đầu trang (phím `F`), giao diện sáng/tối, tối ưu desktop & mobile.

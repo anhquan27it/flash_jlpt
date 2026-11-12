@@ -1,6 +1,48 @@
 // Login / register, and account + display settings once logged in.
-import { auth, login, logout, flush, settings, saveSettings, summary } from '../store.js';
-import { esc, toast } from '../util.js';
+import { auth, login, logout, flush, settings, saveSettings, summary, exportProgress, importProgress } from '../store.js';
+import { esc, toast, todayKey } from '../util.js';
+
+// ---- backup to / restore from a file on this computer ----
+function backupCard() {
+  const s = summary();
+  return `<div class="card backup" style="margin-top:16px">
+    <h2>Sao lưu tiến trình</h2>
+    <p class="small" style="margin:0">Tiến trình flashcard được lưu tự động trên trình duyệt này
+      (đã học <b>${s.mastered + s.learning}</b> từ, đã thuộc <b>${s.mastered}</b>).
+      Lưu thành file trên máy để giữ an toàn khi xoá dữ liệu trình duyệt, hoặc chuyển sang máy khác.</p>
+    <div class="row">
+      <button class="btn primary" type="button" id="exp">⭳ Lưu file tiến trình</button>
+      <label class="btn" for="imp" style="cursor:pointer">⭱ Nhập từ file</label>
+      <input type="file" id="imp" accept=".json,application/json" hidden>
+    </div>
+  </div>`;
+}
+
+function bindBackup(main, rerender) {
+  main.querySelector('#exp')?.addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(exportProgress(), null, 1)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `flashjlpt-tien-trinh-${todayKey()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    toast('Đã lưu file tiến trình');
+  });
+  main.querySelector('#imp')?.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const n = importProgress(JSON.parse(await file.text()));
+      toast(n ? `Đã nhập tiến trình của ${n} từ` : 'Tiến trình trên máy đã mới hơn file – không có gì thay đổi');
+      rerender();
+    } catch (ex) {
+      toast(ex instanceof SyntaxError ? 'File không đúng định dạng JSON' : ex.message);
+    }
+  });
+}
 
 export function render(main) {
   if (auth.user) return renderAccount(main);
@@ -11,7 +53,8 @@ export function render(main) {
         Tiến trình học của bạn vẫn <b>được lưu tự động trên trình duyệt này</b>.</div>
       <p class="muted small" style="margin:0">Để dùng tài khoản và đồng bộ giữa nhiều thiết bị, hãy chạy bản có máy chủ (<code>npm start</code>)
         hoặc triển khai lên dịch vụ hỗ trợ Node.js.</p>
-    </div></div>`;
+    </div>${backupCard()}</div>`;
+    bindBackup(main, () => render(main));
     return;
   }
   renderLogin(main);
@@ -38,8 +81,10 @@ function renderLogin(main) {
         </form>
         <p class="muted small" style="margin:14px 0 0">Tiến trình bạn đã học ở chế độ khách sẽ được tự động gộp vào tài khoản.</p>
       </div>
+      ${backupCard()}
     </div>`;
   const $ = (s) => main.querySelector(s);
+  bindBackup(main, () => render(main));
   $('#mode').addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return;
     mode = b.dataset.v;
@@ -97,8 +142,10 @@ function renderAccount(main) {
           <label class="check"><input type="checkbox" data-k="autoNext" ${settings.autoNext ? 'checked' : ''}><div><b>Tự chuyển câu khi đúng</b><span>Bài tập</span></div></label>
         </div>
       </div>
-    </div>`;
+    </div>
+    ${backupCard()}`;
   const $ = (q) => main.querySelector(q);
+  bindBackup(main, () => render(main));
   const markTheme = () => main.querySelectorAll('#theme button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.v === settings.theme));
   markTheme();
   $('#theme').addEventListener('click', (e) => {

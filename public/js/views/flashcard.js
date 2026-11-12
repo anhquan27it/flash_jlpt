@@ -3,8 +3,12 @@
 // - grade: Chưa nhớ (card comes back later in the session) / Nhớ / Dễ
 // - keyboard: Space/Enter flip · 1 2 3 grade · Z undo · S shuffle · P speak
 // - touch: tap to flip, swipe right = Nhớ, swipe left = Chưa nhớ
-import { data, settings, saveSettings, wordStatus, isDue, isWeak, gradeCard, restoreItem, getItem, temp, lessonWordIds, INTERVALS } from '../store.js';
-import { esc, ruby, shuffle, speak } from '../util.js';
+// - an unfinished session is saved on this device after every card and can be resumed later
+import {
+  data, settings, saveSettings, wordStatus, isDue, isWeak, gradeCard, restoreItem, getItem, temp, lessonWordIds, INTERVALS,
+  loadFcSession, saveFcSession, clearFcSession,
+} from '../store.js';
+import { esc, ruby, shuffle, speak, toast } from '../util.js';
 import { kanjiChips, resolveSource } from './common.js';
 
 const FILTERS = [
@@ -20,7 +24,18 @@ const cleanupRef = { fn: null };
 
 export function render(main, params) {
   cleanupRef.fn = null;
+  const saved = loadFcSession();
+  if (params.resume && saved) {
+    cleanupRef.fn = startSession(main, saved, saved);
+    return () => cleanupRef.fn && cleanupRef.fn();
+  }
   const fixed = resolveSource(params.src, temp);
+  // opening the same deck again continues where you left off
+  if (fixed && saved && saved.label === fixed.label && sameSet(saved.ids, fixed.ids)) {
+    toast(`Tiếp tục phiên đang học dở (${saved.pos}/${saved.queue.length} thẻ)`);
+    cleanupRef.fn = startSession(main, saved, saved);
+    return () => cleanupRef.fn && cleanupRef.fn();
+  }
   if (fixed) {
     if (!fixed.ids.length) {
       main.innerHTML = `<div class="empty"><h2>Không có thẻ nào</h2><p>${esc(fixed.label)} hiện không có từ nào.</p>
@@ -29,13 +44,36 @@ export function render(main, params) {
     }
     cleanupRef.fn = startSession(main, { ids: fixed.ids, label: fixed.label });
   } else {
-    renderSetup(main);
+    renderSetup(main, saved);
   }
   return () => cleanupRef.fn && cleanupRef.fn();
 }
 
+const sameSet = (a, b) => a.length === b.length && b.every((id) => a.includes(id));
+
+/** "Continue where you left off" banner (also used on the home page). */
+export function resumeBanner(saved) {
+  if (!saved) return '';
+  const left = saved.queue.length - saved.pos;
+  const when = new Date(saved.savedAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+  return `<div class="due-chip resume">
+    <span><b>Phiên đang học dở:</b> ${esc(saved.label)} · đã học ${saved.pos}/${saved.queue.length} thẻ, còn ${left} thẻ
+      <span class="muted small">· lưu lúc ${when}</span></span>
+    <span class="spacer"></span>
+    <a class="btn sm primary" href="#/flashcard?resume=1">Tiếp tục</a>
+    <button class="btn sm ghost" type="button" data-discard>Bỏ phiên</button>
+  </div>`;
+}
+export function bindResumeBanner(root) {
+  root.querySelector('[data-discard]')?.addEventListener('click', (e) => {
+    clearFcSession();
+    e.target.closest('.resume').remove();
+    toast('Đã bỏ phiên đang học dở');
+  });
+}
+
 // ---------------- setup ----------------
-function renderSetup(main) {
+function renderSetup(main, saved) {
   const st = {
     lessons: new Set(settings.fcLessons?.length ? settings.fcLessons : [data.lessons[0].id]),
     filter: settings.fcFilter || 'all',
@@ -45,6 +83,7 @@ function renderSetup(main) {
 
   main.innerHTML = `
     <div class="page-head"><div><h1>Flashcard</h1><p>Chọn bài và kiểu thẻ – mỗi phiên đều được xáo trộn ngẫu nhiên</p></div></div>
+    ${saved ? `<div style="margin-bottom:14px">${resumeBanner(saved)}</div>` : ''}
     <div class="card setup">
       <div class="group"><div class="lbl">Bài học <span class="spacer"></span>
         <button class="btn sm ghost" type="button" id="all">Chọn tất cả</button>
@@ -74,6 +113,7 @@ function renderSetup(main) {
     <p class="muted small" style="margin-top:12px">Mẹo: furigana trên thẻ theo nút <b>ふりがな</b> ở đầu trang – tắt đi để tự luyện cách đọc.</p>`;
 
   const $ = (s) => main.querySelector(s);
+  bindResumeBanner(main);
   const pool = () => {
     const ids = new Set();
     for (const l of st.lessons) lessonWordIds(l).forEach((id) => ids.add(id));
@@ -126,18 +166,23 @@ function renderSetup(main) {
 }
 
 // ---------------- session ----------------
-function startSession(main, deck) {
-  const dir = settings.fcDir || 'jp';
-  const queue = shuffle([...deck.ids]);
-  const firstGrade = new Map(); // id → first grade in this session (for the summary)
+function startSession(main, deck, saved = null) {
+  const dir = saved?.dir || settings.fcDir || 'jp';
+  const queue = saved ? [...saved.queue] : shuffle([...deck.ids]);
+  const firstGrade = new Map(saved?.firstGrade || []); // id → first grade in this session (for the summary)
   const history = [];
-  let pos = 0;
+  let pos = saved?.pos || 0;
   let flipped = false;
+
+  const save = () => saveFcSession({
+    label: deck.label, ids: deck.ids, dir, queue, pos, firstGrade: [...firstGrade],
+  });
+  if (!saved) save(); // a new session replaces any older unfinished one
 
   main.innerHTML = `
     <div class="study">
       <div class="study-top">
-        <a class="btn ghost sm" href="#/flashcard" title="Thoát phiên học">✕</a>
+        <a class="btn ghost sm" href="#/flashcard" title="Thoát – phiên được lưu, có thể tiếp tục sau">✕</a>
         <span class="count" id="count"></span>
         <div class="bar"><span class="done" id="bar"></span></div>
         <button class="btn ghost sm" type="button" id="shuf" title="Xáo trộn các thẻ còn lại (S)">⤮ Xáo trộn</button>
@@ -155,6 +200,7 @@ function startSession(main, deck) {
     const rest = shuffle(queue.splice(pos));
     queue.push(...rest);
     flipped = false;
+    save();
     draw();
   }
 
@@ -235,6 +281,7 @@ function startSession(main, deck) {
     history.push({ id, prev, requeued, isFirst });
     pos++;
     flipped = false;
+    save();
     draw();
   }
 
@@ -246,6 +293,7 @@ function startSession(main, deck) {
     if (h.isFirst) firstGrade.delete(h.id);
     pos--;
     flipped = true;
+    save();
     draw();
   }
 
@@ -293,6 +341,7 @@ function startSession(main, deck) {
   }
 
   function finish() {
+    clearFcSession();
     const ids = [...firstGrade.keys()];
     const again = ids.filter((id) => firstGrade.get(id) === 0);
     const good = ids.length - again.length;

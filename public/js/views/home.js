@@ -1,6 +1,7 @@
 // Dashboard: one clear "next step", a compact progress summary and the lesson grid.
-import { data, summary, streak, dayCount, auth, lessonWordIds } from '../store.js';
+import { data, summary, streak, dayCount, auth, lessonWordIds, loadFcSession } from '../store.js';
 import { esc, todayKey } from '../util.js';
+import { resumeBanner, bindResumeBanner } from './flashcard.js';
 
 const DAY_NAMES = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 const GUEST_NOTE_KEY = 'fj_hide_guest_note';
@@ -66,6 +67,7 @@ export function render(main) {
       </div>
     </section>
 
+    ${resumeBanner(loadFcSession())}
     ${all.due ? `<div class="due-chip"><span><b>${all.due} từ</b> đã đến hạn ôn tập</span><span class="spacer"></span>
       <a class="btn sm primary" href="#/flashcard?src=due">Ôn ngay</a><a class="btn sm" href="#/quiz?src=due">Bài tập</a></div>` : ''}
     ${all.weak ? `<div class="note-line"><span>Có ${all.weak} từ bạn hay sai · <a href="#/flashcard?src=weak">Ôn lại</a></span></div>` : ''}
@@ -88,6 +90,7 @@ export function render(main) {
       </a>`;
     }).join('')}</div>`;
 
+  bindResumeBanner(main);
   main.querySelector('#guest button')?.addEventListener('click', () => {
     try { localStorage.setItem(GUEST_NOTE_KEY, '1'); } catch { /* ignore */ }
     main.querySelector('#guest').remove();

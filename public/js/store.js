@@ -295,3 +295,58 @@ function emit() { listeners.forEach((fn) => fn(auth)); }
 
 // temporary deck passed between views (e.g. "flashcard these filtered words")
 export const temp = { deck: null };
+
+// ====================== unfinished flashcard session (kept on this device) ======================
+const sessionKey = () => `fj_fc_session:${progressKey}`;
+
+/** The unfinished flashcard session, or null. Cards that no longer exist in the data are dropped. */
+export function loadFcSession() {
+  const s = readJSON(sessionKey(), null);
+  if (!s || s.v !== 1 || !Array.isArray(s.queue)) return null;
+  const known = (id) => data.wordById.has(id);
+  const done = s.queue.slice(0, s.pos).filter(known);
+  const rest = s.queue.slice(s.pos).filter(known);
+  if (!rest.length) return null;
+  return {
+    ...s,
+    queue: [...done, ...rest],
+    pos: done.length,
+    ids: (s.ids || []).filter(known),
+    firstGrade: (s.firstGrade || []).filter(([id]) => known(id)),
+  };
+}
+export function saveFcSession(s) {
+  try { localStorage.setItem(sessionKey(), JSON.stringify({ v: 1, ...s, savedAt: Date.now() })); } catch { /* quota */ }
+}
+export function clearFcSession() {
+  try { localStorage.removeItem(sessionKey()); } catch { /* ignore */ }
+}
+
+// ====================== backup file (export / import) ======================
+export function exportProgress() {
+  return {
+    app: 'FlashJLPT', version: 1, exportedAt: new Date().toISOString(),
+    items: progress.items, days: progress.days,
+  };
+}
+
+/** Merge a backup into the current progress (newer entries win). Returns the number of words changed. */
+export function importProgress(backup) {
+  if (!backup || backup.app !== 'FlashJLPT' || typeof backup.items !== 'object' || !backup.items) {
+    throw new Error('File không phải bản sao lưu FlashJLPT');
+  }
+  const items = {};
+  for (const [id, it] of Object.entries(backup.items)) {
+    if (data.wordById.has(id) && it && typeof it === 'object' && Number.isFinite(it.lv) && Number.isFinite(it.due)) items[id] = it;
+  }
+  const days = {};
+  for (const [d, c] of Object.entries(backup.days || {})) {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d) && Number.isFinite(c)) days[d] = c;
+  }
+  const newer = Object.keys(items).filter((id) => !progress.items[id] || (items[id].u || 0) > (progress.items[id].u || 0));
+  merge(progress, { items, days });
+  newer.forEach((id) => dirty.add(id));
+  dirtyDays = true;
+  persist();
+  return newer.length;
+}

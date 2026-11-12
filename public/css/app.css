@@ -499,3 +499,6 @@ kbd {
   .dash h1 { font-size: 1.45rem; }
   .dash-side { text-align: left; }
 }
+.due-chip.resume { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.due-chip.resume b { color: var(--accent); }
+.backup .row { margin-top: 12px; }
