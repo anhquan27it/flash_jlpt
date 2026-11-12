@@ -95,6 +95,19 @@ function route() {
   location.hash = '#/';
 }
 
+// A link to the page you are already on (e.g. "Thiết lập khác" → #/quiz while a quiz started from
+// #/quiz is showing) does not fire hashchange, so re-render the page ourselves.
+document.addEventListener('click', (e) => {
+  if (e.defaultPrevented || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+  const a = e.target.closest('a[href^="#"]');
+  if (!a) return;
+  const norm = (h) => { try { return decodeURIComponent(h.replace(/^#/, '') || '/'); } catch { return h; } };
+  if (norm(a.getAttribute('href')) === norm(location.hash)) {
+    e.preventDefault();
+    route();
+  }
+});
+
 // ---------- global shortcuts ----------
 document.addEventListener('keydown', (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey) return;

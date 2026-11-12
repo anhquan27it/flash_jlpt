@@ -284,7 +284,10 @@ function run(main, deck, preset) {
   function onKey(e) {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.target.tagName === 'INPUT') return;
-    if (i >= questions.length) return;
+    if (i >= questions.length) { // results screen: Enter = main button
+      if (e.key === 'Enter' && !e.target.closest?.('button, a')) { e.preventDefault(); stage.querySelector('.summary .btn.primary')?.click(); }
+      return;
+    }
     if (/^[1-4]$/.test(e.key)) { e.preventDefault(); choose(Number(e.key) - 1); }
     else if (e.key === 'Enter' && locked) { e.preventDefault(); next(); }
   }

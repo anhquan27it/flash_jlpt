@@ -376,7 +376,10 @@ function startSession(main, deck, saved = null) {
 
   function onKey(e) {
     if (e.ctrlKey || e.metaKey || e.altKey || e.target.tagName === 'INPUT') return;
-    if (pos >= queue.length) return;
+    if (pos >= queue.length) { // summary screen: Enter = main button
+      if (e.key === 'Enter' && !e.target.closest?.('button, a')) { e.preventDefault(); stage.querySelector('.summary .btn.primary')?.click(); }
+      return;
+    }
     const k = e.key.toLowerCase();
     if (k === ' ' || k === 'enter') { e.preventDefault(); flip(); }
     else if (flipped && (k === '1' || k === 'arrowleft')) grade(0);
