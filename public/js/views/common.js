@@ -1,6 +1,6 @@
 // Small render helpers shared by several views.
-import { data, wordStatus, isDue, isWeak, STATUS_LABEL } from '../store.js';
-import { esc, ruby, speak } from '../util.js';
+import { data, wordStatus, isDue, isWeak, isStarred, toggleStar, STATUS_LABEL } from '../store.js';
+import { esc, ruby, speak, toast } from '../util.js';
 
 export function statusBadge(id) {
   if (isDue(id)) return `<span class="badge s-due">${STATUS_LABEL.due}</span>`;
@@ -21,13 +21,45 @@ export function speakBtn(word) {
   return `<button class="speak" type="button" data-speak="${esc(word.id)}" aria-label="Nghe phát âm ${esc(word.r)}" title="Nghe phát âm">🔊</button>`;
 }
 
+/** Star toggle for a word ("từ khó nhớ" – studied separately in the starred deck). */
+export function starBtn(id) {
+  const on = isStarred(id);
+  return `<button class="star${on ? ' on' : ''}" type="button" data-star="${esc(id)}" aria-pressed="${on}"
+    aria-label="${on ? 'Bỏ đánh dấu sao' : 'Đánh dấu sao (từ khó nhớ)'}" title="${on ? 'Bỏ đánh dấu sao' : 'Đánh dấu sao – từ khó nhớ'}">${on ? '★' : '☆'}</button>`;
+}
+function paintStar(b, on) {
+  b.classList.toggle('on', on);
+  b.setAttribute('aria-pressed', on);
+  b.textContent = on ? '★' : '☆';
+  b.title = on ? 'Bỏ đánh dấu sao' : 'Đánh dấu sao – từ khó nhớ';
+  b.setAttribute('aria-label', on ? 'Bỏ đánh dấu sao' : 'Đánh dấu sao (từ khó nhớ)');
+}
+/** Toggle a word's star and repaint every star button for it inside `root`. */
+export function flipStar(root, id) {
+  const on = toggleStar(id);
+  root.querySelectorAll(`[data-star="${CSS.escape(id)}"]`).forEach((b) => paintStar(b, on));
+  toast(on ? '★ Đã thêm vào mục Từ đánh dấu sao' : 'Đã bỏ đánh dấu sao', 1400);
+  return on;
+}
+/** Delegated click handler for [data-star] buttons inside `root`. */
+export function bindStar(root, onChange) {
+  root.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-star]');
+    if (!b) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const on = flipStar(root, b.dataset.star);
+    onChange?.(b.dataset.star, on);
+  });
+}
+
 /** One vocabulary row (word with furigana, reading, meaning, kanji, status). */
 export function wordRow(word, { showReading = false, extra = '' } = {}) {
   return `<li class="witem">
     <div class="w">${ruby(word.t)}${showReading ? `<span class="rd">${esc(word.r)}</span>` : ''}</div>
     <div class="m">${esc(word.m)}${word.note ? ` <span class="muted small">(${esc(word.note)})</span>` : ''}
       <span class="ks">${kanjiChips(word)}</span>${extra}</div>
-    <div class="acts">${statusBadge(word.id)}${speakBtn(word)}</div>
+    <div class="acts">${statusBadge(word.id)}${starBtn(word.id)}${speakBtn(word)}</div>
   </li>`;
 }
 
@@ -80,6 +112,7 @@ export function resolveSource(src, temp) {
     return { ids: [...ids], label: `Bài ${l.id}` };
   }
   if (kind === 'due') return { ids: data.words.map((w) => w.id).filter((id) => isDue(id)), label: 'Từ cần ôn hôm nay' };
+  if (kind === 'starred') return { ids: data.words.map((w) => w.id).filter((id) => isStarred(id)), label: '★ Từ đánh dấu sao' };
   if (kind === 'weak') return { ids: data.words.map((w) => w.id).filter((id) => isWeak(id)), label: 'Từ hay sai' };
   if (kind === 'custom' && temp?.deck) return { ids: [...temp.deck.ids], label: temp.deck.label };
   return null;

@@ -1,15 +1,15 @@
 // Flashcards with spaced repetition.
 // - every session is shuffled; a "Xáo trộn" button reshuffles the remaining cards
 // - grade: Chưa nhớ (card comes back later in the session) / Nhớ / Dễ
-// - keyboard: Space/Enter flip · 1 2 3 grade · Z undo · S shuffle · P speak
+// - keyboard: Space/Enter flip · 1 2 3 grade · Z undo · S shuffle · P speak · D star (từ khó nhớ)
 // - touch: tap to flip, swipe right = Nhớ, swipe left = Chưa nhớ
 // - an unfinished session is saved on this device after every card and can be resumed later
 import {
   data, settings, saveSettings, wordStatus, isDue, isWeak, gradeCard, restoreItem, getItem, temp, lessonWordIds, INTERVALS,
-  loadFcSession, saveFcSession, clearFcSession,
+  loadFcSession, saveFcSession, clearFcSession, isStarred, starredIds,
 } from '../store.js';
 import { esc, ruby, shuffle, speak, toast } from '../util.js';
-import { kanjiChips, resolveSource } from './common.js';
+import { kanjiChips, resolveSource, starBtn, flipStar } from './common.js';
 
 const FILTERS = [
   ['all', 'Tất cả', ''],
@@ -17,6 +17,7 @@ const FILTERS = [
   ['due', 'Cần ôn', 'đến hạn ôn tập'],
   ['notmastered', 'Chưa thuộc', 'mới + đang học'],
   ['weak', 'Hay sai', 'quên nhiều / làm sai'],
+  ['starred', '★ Có sao', 'từ bạn đã đánh dấu sao'],
 ];
 const SIZES = [10, 20, 30, 50, 0];
 
@@ -84,6 +85,7 @@ function renderSetup(main, saved) {
   main.innerHTML = `
     <div class="page-head"><div><h1>Flashcard</h1><p>Chọn bài và kiểu thẻ – mỗi phiên đều được xáo trộn ngẫu nhiên</p></div></div>
     ${saved ? `<div style="margin-bottom:14px">${resumeBanner(saved)}</div>` : ''}
+    ${starBanner()}
     <div class="card setup">
       <div class="group"><div class="lbl">Bài học <span class="spacer"></span>
         <button class="btn sm ghost" type="button" id="all">Chọn tất cả</button>
@@ -123,6 +125,7 @@ function renderSetup(main, saved) {
         case 'due': return isDue(id);
         case 'notmastered': return wordStatus(id) !== 'mastered';
         case 'weak': return isWeak(id);
+        case 'starred': return isStarred(id);
         default: return true;
       }
     });
@@ -230,12 +233,12 @@ function startSession(main, deck, saved = null) {
       <div class="fc-wrap"><div class="fc${flipped ? ' flipped' : ''}" id="card" tabindex="0" role="button" aria-label="Thẻ – bấm để lật">
         <div class="fc-face fc-front">
           <span class="corner">${statusText(w.id)}</span>
-          <span class="corner-r"><button class="speak" type="button" data-act="speak" title="Nghe (P)">🔊</button></span>
+          <span class="corner-r">${starBtn(w.id)}<button class="speak" type="button" data-act="speak" title="Nghe (P)">🔊</button></span>
           ${front(w)}
           <div class="hint">Chạm hoặc nhấn <kbd>Space</kbd> để lật</div>
         </div>
         <div class="fc-face fc-back">
-          <span class="corner-r"><button class="speak" type="button" data-act="speak" title="Nghe (P)">🔊</button></span>
+          <span class="corner-r">${starBtn(w.id)}<button class="speak" type="button" data-act="speak" title="Nghe (P)">🔊</button></span>
           ${back(w)}
         </div>
       </div></div>
@@ -302,6 +305,8 @@ function startSession(main, deck, saved = null) {
     stage.onclick = (e) => {
       const a = e.target.closest('[data-act]');
       const g = e.target.closest('[data-g]');
+      const s = e.target.closest('[data-star]');
+      if (s) { e.stopPropagation(); flipStar(stage, s.dataset.star); return; }
       if (a?.dataset.act === 'speak') { e.stopPropagation(); speak(data.wordById.get(queue[pos])); return; }
       if (a?.dataset.act === 'undo') return undo();
       if (a?.dataset.act === 'flip') return flip();
@@ -388,10 +393,24 @@ function startSession(main, deck, saved = null) {
     else if (k === 'z') undo();
     else if (k === 's') reshuffle();
     else if (k === 'p') speak(data.wordById.get(queue[pos]));
+    else if (k === 'd') flipStar(stage, queue[pos]);
   }
   document.addEventListener('keydown', onKey);
   draw();
   return () => document.removeEventListener('keydown', onKey);
+}
+
+/** Shortcut to the starred deck ("mục riêng" for words that are hard to remember). */
+function starBanner() {
+  const n = starredIds().length;
+  if (!n) {
+    return `<p class="muted small" style="margin:0 0 14px">Mẹo: bấm <b>☆</b> ở danh sách từ hoặc trên thẻ (phím <kbd>D</kbd>) để đánh dấu từ khó nhớ – sau đó học riêng các từ đó tại đây.</p>`;
+  }
+  return `<div class="due-chip starred" style="margin-bottom:14px">
+    <span><b>★ ${n} từ</b> đánh dấu sao (khó nhớ)</span><span class="spacer"></span>
+    <a class="btn sm primary" href="#/flashcard?src=starred">Học flashcard</a>
+    <a class="btn sm" href="#/vocab?s=starred">Xem danh sách</a>
+  </div>`;
 }
 
 function statusText(id) {

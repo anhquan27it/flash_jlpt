@@ -1,7 +1,7 @@
 // Vocabulary list with search (Japanese, kana, romaji, Vietnamese without accents) and filters.
-import { data, wordStatus, isDue, isWeak, temp } from '../store.js';
+import { data, wordStatus, isDue, isWeak, isStarred, temp } from '../store.js';
 import { normVi, romajiToKana, kataToHira } from '../util.js';
-import { wordRow, bindSpeak, lessonOptions } from './common.js';
+import { wordRow, bindSpeak, bindStar, lessonOptions } from './common.js';
 
 export function render(main, params) {
   main.innerHTML = `
@@ -14,6 +14,7 @@ export function render(main, params) {
       <select class="input" id="vs" style="width:auto" aria-label="Lọc theo trạng thái">
         <option value="">Mọi trạng thái</option><option value="new">Chưa học</option><option value="learning">Đang học</option>
         <option value="mastered">Đã thuộc</option><option value="due">Cần ôn</option><option value="weak">Hay sai</option>
+        <option value="starred">★ Đánh dấu sao</option>
       </select>
     </div>
     <div class="row" style="margin-bottom:12px">
@@ -47,7 +48,8 @@ export function render(main, params) {
       if (lf && !lessonOf.get(w.id)?.has(lf)) return false;
       if (sf === 'due' && !isDue(w.id)) return false;
       if (sf === 'weak' && !isWeak(w.id)) return false;
-      if (sf && sf !== 'due' && sf !== 'weak' && wordStatus(w.id) !== sf) return false;
+      if (sf === 'starred' && !isStarred(w.id)) return false;
+      if (sf && !['due', 'weak', 'starred'].includes(sf) && wordStatus(w.id) !== sf) return false;
       if (!term) return true;
       return w.w.includes(term) || w.r.includes(kana) || normVi(w.m).includes(tv)
         || w.ks.some((c) => normVi(data.kanjiByChar.get(c).hv) === tv);
@@ -59,6 +61,8 @@ export function render(main, params) {
 
   function useList(target) {
     if (!current.length) return;
+    // the starred list (with no other filter) opens the live starred deck
+    if (ss.value === 'starred' && !q.value.trim() && !sl.value) { location.hash = `#/${target}?src=starred`; return; }
     temp.deck = { ids: current.map((w) => w.id), label: 'Danh sách từ đã lọc' };
     location.hash = `#/${target}?src=custom`;
   }
@@ -67,6 +71,9 @@ export function render(main, params) {
   ss.addEventListener('change', draw);
   main.querySelector('#vfc').addEventListener('click', () => useList('flashcard'));
   main.querySelector('#vqz').addEventListener('click', () => useList('quiz'));
+  if (params.s) ss.value = params.s;
+  ss.addEventListener('change', () => history.replaceState(null, '', ss.value ? `#/vocab?s=${ss.value}` : '#/vocab'));
   bindSpeak(main);
+  bindStar(main);
   draw();
 }

@@ -117,9 +117,20 @@ export function recordQuiz(id, correct) {
 }
 
 export function restoreItem(id, prev) {
-  if (prev) put(id, { ...prev, u: Date.now() });
-  else put(id, { ...blank(), u: Date.now() });
+  const star = !!progress.items[id]?.star; // undoing a grade never changes the star
+  put(id, { ...(prev || blank()), star });
 }
+
+// ====================== starred ("khó nhớ") words ======================
+// Stored on the progress item (star: true) so it syncs and is backed up like the rest.
+export const isStarred = (id) => !!progress.items[id]?.star;
+export function toggleStar(id) {
+  const it = { ...blank(), ...progress.items[id] };
+  it.star = !it.star;
+  put(id, it);
+  return it.star;
+}
+export const starredIds = () => data.words.map((w) => w.id).filter(isStarred);
 
 function put(id, it) {
   it.u = Date.now();

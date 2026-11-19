@@ -2,7 +2,7 @@
 // vocabulary that uses the kanji, which is what matters most for the exam.
 import { data, summary, lessonWordIds } from '../store.js';
 import { esc, normVi, kataToHira } from '../util.js';
-import { wordRow, bindSpeak, kanjiStatus, lessonOptions, progressBar } from './common.js';
+import { wordRow, bindSpeak, bindStar, kanjiStatus, lessonOptions, progressBar } from './common.js';
 
 export function render(main, params) {
   if (params.sub === 'detail') return renderDetail(main, decodeURIComponent(params.match[1]));
@@ -100,6 +100,7 @@ function renderDetail(main, char) {
       ${next ? `<a class="btn" href="#/kanji/${encodeURIComponent(next.k)}"><span class="jp">${esc(next.k)}</span> ${esc(next.hv)} →</a>` : '<span></span>'}
     </div>`;
   bindSpeak(main);
+  bindStar(main);
 
   const onKey = (e) => {
     if (e.target.tagName === 'INPUT' || e.ctrlKey || e.metaKey || e.altKey) return;

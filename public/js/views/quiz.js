@@ -1,12 +1,12 @@
 // Multiple-choice / typing quiz. Wrong answers are fed back into spaced repetition.
 // Keyboard: 1–4 choose · Enter next.
-import { data, settings, saveSettings, wordStatus, isDue, isWeak, recordQuiz, temp, lessonWordIds } from '../store.js';
+import { data, settings, saveSettings, wordStatus, isDue, isWeak, isStarred, recordQuiz, temp, lessonWordIds } from '../store.js';
 import { esc, ruby, speak, romajiToKana, normReading, shuffle } from '../util.js';
 import { resolveSource, kanjiChips } from './common.js';
 import { TYPES, makeQuiz, homographs } from './quizgen.js';
 
 const COUNTS = [10, 20, 30, 50];
-const FILTERS = [['all', 'Tất cả'], ['learned', 'Từ đã học'], ['due', 'Cần ôn'], ['weak', 'Hay sai']];
+const FILTERS = [['all', 'Tất cả'], ['learned', 'Từ đã học'], ['due', 'Cần ôn'], ['weak', 'Hay sai'], ['starred', '★ Có sao']];
 const DEFAULT_TYPES = ['read', 'write', 'meaning', 'word'];
 
 const cleanupRef = { fn: null };
@@ -65,7 +65,7 @@ function renderSetup(main) {
     const ids = new Set();
     for (const l of st.lessons) lessonWordIds(l).forEach((id) => ids.add(id));
     return [...ids].filter((id) => (st.filter === 'learned' ? wordStatus(id) !== 'new'
-      : st.filter === 'due' ? isDue(id) : st.filter === 'weak' ? isWeak(id) : true));
+      : st.filter === 'due' ? isDue(id) : st.filter === 'weak' ? isWeak(id) : st.filter === 'starred' ? isStarred(id) : true));
   };
   function sync() {
     main.querySelectorAll('#lessons .chip').forEach((b) => b.setAttribute('aria-pressed', st.lessons.has(Number(b.dataset.l))));

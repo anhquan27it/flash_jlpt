@@ -1,5 +1,5 @@
 // Dashboard: one clear "next step", a compact progress summary and the lesson grid.
-import { data, summary, streak, dayCount, auth, lessonWordIds, loadFcSession } from '../store.js';
+import { data, summary, streak, dayCount, auth, lessonWordIds, loadFcSession, starredIds } from '../store.js';
 import { esc, todayKey } from '../util.js';
 import { resumeBanner, bindResumeBanner } from './flashcard.js';
 
@@ -41,6 +41,7 @@ export function render(main) {
       <span class="${c ? 'on' : ''}"></span>${i === 0 ? 'Nay' : DAY_NAMES[d.getDay()]}</div>`);
   }
   const st = streak();
+  const starred = starredIds().length;
   const showGuest = !auth.user && auth.available && !safeGet(GUEST_NOTE_KEY);
 
   main.innerHTML = `
@@ -71,6 +72,7 @@ export function render(main) {
     ${all.due ? `<div class="due-chip"><span><b>${all.due} từ</b> đã đến hạn ôn tập</span><span class="spacer"></span>
       <a class="btn sm primary" href="#/flashcard?src=due">Ôn ngay</a><a class="btn sm" href="#/quiz?src=due">Bài tập</a></div>` : ''}
     ${all.weak ? `<div class="note-line"><span>Có ${all.weak} từ bạn hay sai · <a href="#/flashcard?src=weak">Ôn lại</a></span></div>` : ''}
+    ${starred ? `<div class="note-line"><span>★ ${starred} từ đánh dấu sao · <a href="#/flashcard?src=starred">Học flashcard</a> · <a href="#/vocab?s=starred">Xem danh sách</a></span></div>` : ''}
     ${showGuest ? `<div class="note-line" id="guest"><span>Đang học ở chế độ khách – <a href="#/account">đăng nhập</a> để lưu tiến trình trên mọi thiết bị.</span>
       <button type="button" aria-label="Ẩn thông báo" title="Ẩn">✕</button></div>` : ''}
 
